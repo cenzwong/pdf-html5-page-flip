@@ -12,6 +12,10 @@ var MagazineView = {
     layout: 'double',
     maxScale: 2,
     init: function () {
+        MagazineView.layout = ($(window).width() < 768) ? 'single' : 'double';
+        $(window).resize(function() {
+            if(MagazineView.magazineMode) MagazineView.resizeViewport();
+        });
         $('#toolbarViewerRight').prepend('<button id="magazineMode" class="toolbarButton magazineMode hiddenLargeView" title="Switch to Magazine Mode" tabindex="99" data-l10n-id="magazine_mode"><span data-l10n-id="magazine_mode_label">Magazine Mode</span></button>');
         //$('#toolbarViewerMiddle').append('<div id="magazineViewButtonContainer"><button id="exitMagazineView" class="toolbarButton exit" title="Zoom Out" tabindex="21" data-l10n-id="exit"><span data-l10n-id="exit_label">Exit Magazine Mode</span></button></div>')
         $('#secondaryToolbarButtonContainer').prepend('<button id="secondaryMagazineMode" class="secondaryToolbarButton magazineMode visibleLargeView" title="Switch to Magazine Mode" tabindex="51" data-l10n-id="magazine_mode"><span data-l10n-id="magazine_mode_label">Magazine Mode</span></button>');
@@ -70,6 +74,7 @@ var MagazineView = {
         }
     },
     start: function () {
+        MagazineView.layout = ($(window).width() < 768) ? 'single' : 'double';
 
         if (PDFViewerApplication.sidebarOpen) 
             document.getElementById('sidebarToggle').click();
@@ -109,9 +114,9 @@ var MagazineView = {
 
             $("#magazine").turn({
                 autoCenter: true,
-                display: 'single',
-                width: $("#viewer .canvasWrapper canvas")[0].width,
-                height: $("#viewer .canvasWrapper canvas")[0].height,
+                display: MagazineView.layout,
+                width: ($("#viewer .canvasWrapper canvas")[0] ? $("#viewer .canvasWrapper canvas")[0].width : 800),
+                height: ($("#viewer .canvasWrapper canvas")[0] ? $("#viewer .canvasWrapper canvas")[0].height : 600),
                 pages: PDFViewerApplication.pdfDocument.numPages,
                 page: 1,
                 elevation: 100,
@@ -143,11 +148,21 @@ var MagazineView = {
             setTimeout(function () {
                 $("#magazine").turn("display", MagazineView.layout);
 
-                var multiplier = MagazineView.layout == 'double' ? 2 : 1;
 
-                $("#magazine").turn("size",
-                    $("#magazine canvas")[0].width * multiplier,
-                    $("#magazine canvas")[0].height);
+                var multiplier = MagazineView.layout == 'double' ? 2 : 1;
+                var finalWidth = $("#magazine canvas")[0] ? $("#magazine canvas")[0].width * multiplier : 800;
+                var finalHeight = $("#magazine canvas")[0] ? $("#magazine canvas")[0].height : 600;
+
+                if (MagazineView.layout == 'single') {
+                    var winW = $(window).width() - 40;
+                    var aspect = finalWidth / finalHeight;
+                    if (winW < finalWidth) {
+                        finalWidth = winW;
+                        finalHeight = finalWidth / aspect;
+                    }
+                }
+                $("#magazine").turn("size", finalWidth, finalHeight);
+
 
                 if (MagazineView.currentPage > 1)
                     $("#magazine").turn("page", MagazineView.currentPage);
@@ -224,10 +239,31 @@ var MagazineView = {
             $('#magazineContainer .next-button').show();
     },
     resizeViewport: function () {
-
         var width = $(window).width(),
             height = $(window).height(),
             options = $('#magazine').turn('options');
+
+        var newLayout = (width < 768) ? 'single' : 'double';
+        if (newLayout !== MagazineView.layout) {
+            MagazineView.layout = newLayout;
+            $('#magazine').turn('display', MagazineView.layout);
+
+            var multiplier = MagazineView.layout == 'double' ? 2 : 1;
+            var finalWidth = ($("#magazine canvas")[0] ? $("#magazine canvas")[0].width : 800) * multiplier;
+            var finalHeight = ($("#magazine canvas")[0] ? $("#magazine canvas")[0].height : 600);
+
+            if (MagazineView.layout == 'single') {
+                var winW = width - 40;
+                var aspect = finalWidth / finalHeight;
+                if (winW < finalWidth) {
+                    finalWidth = winW;
+                    finalHeight = finalWidth / aspect;
+                }
+            }
+            $("#magazine").turn("size", finalWidth, finalHeight);
+
+            MagazineView.loadTurnJsPages($('#magazine').turn('view'), $('#magazine'), false, false);
+        }
 
         $('#magazine').removeClass('animated');
 
@@ -316,7 +352,14 @@ var MagazineView = {
                 var unscaledViewport = page.getViewport(1);
                 var divider = MagazineView.layout == 'double' ? 2 : 1;
 
-                var scale = Math.min((($('#mainContainer').height() - 20) / unscaledViewport.height), ((($('#mainContainer').width()- 80) / divider) / unscaledViewport.width));
+                var scale = Math.min((($('#mainContainer').height() - 20) / unscaledViewport.height), ((($('#mainContainer').width()- (MagazineView.layout === 'single' ? 20 : 80)) / divider) / unscaledViewport.width));
+                if (MagazineView.layout === 'single') {
+                   // Ensure scale completely ignores divider halfing!
+                   var hScale = ($('#mainContainer').height() - 20) / unscaledViewport.height;
+                   var wScale = ($('#mainContainer').width() - 20) / unscaledViewport.width; // minimal horizontal padding needed
+                   scale = Math.min(hScale, wScale);
+                }
+
 
                 var viewport = page.getViewport(scale);
 
