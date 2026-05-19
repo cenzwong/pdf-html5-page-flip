@@ -1,7 +1,7 @@
 ﻿////////////////////////////////////////////////////////////////////////
 //
 // Neil Marshall - Link Information Technology Ltd 2016
-// 
+//
 ////////////////////////////////////////////////////////////////////////
 
 var MagazineView = {
@@ -45,7 +45,7 @@ var MagazineView = {
         $(document).on('click', '#magazineContainer .next-button', function (e) {
             $("#magazine").turn('next');
         });
-		
+
 		if(window.location.hash.indexOf('magazineMode=true') == -1)
         {
 			document.addEventListener("pagesloaded", MagazineView.launchMagazineMode, true);
@@ -76,9 +76,9 @@ var MagazineView = {
     start: function () {
         MagazineView.layout = ($(window).width() < 768) ? 'single' : 'double';
 
-        if (PDFViewerApplication.sidebarOpen) 
+        if (PDFViewerApplication.sidebarOpen)
             document.getElementById('sidebarToggle').click();
-        
+
         MagazineView.magazineMode = true;
         MagazineView.oldScale = PDFViewerApplication.pdfViewer.currentScale;
         PDFViewerApplication.pdfViewer.currentScaleValue = 'page-fit';
@@ -139,7 +139,7 @@ var MagazineView = {
                         MagazineView.currentPage = page;
                         MagazineView.showHidePageButtons(page);
 
-                    }  
+                    }
                 }
             });
 
@@ -167,7 +167,7 @@ var MagazineView = {
                 if (MagazineView.currentPage > 1)
                     $("#magazine").turn("page", MagazineView.currentPage);
 
-                
+
 
                 $("#magazineContainer").zoom({
                     max: MagazineView.maxScale,
@@ -247,21 +247,6 @@ var MagazineView = {
         if (newLayout !== MagazineView.layout) {
             MagazineView.layout = newLayout;
             $('#magazine').turn('display', MagazineView.layout);
-
-            var multiplier = MagazineView.layout == 'double' ? 2 : 1;
-            var finalWidth = ($("#magazine canvas")[0] ? $("#magazine canvas")[0].width : 800) * multiplier;
-            var finalHeight = ($("#magazine canvas")[0] ? $("#magazine canvas")[0].height : 600);
-
-            if (MagazineView.layout == 'single') {
-                var winW = width - 40;
-                var aspect = finalWidth / finalHeight;
-                if (winW < finalWidth) {
-                    finalWidth = winW;
-                    finalHeight = finalWidth / aspect;
-                }
-            }
-            $("#magazine").turn("size", finalWidth, finalHeight);
-
             MagazineView.loadTurnJsPages($('#magazine').turn('view'), $('#magazine'), false, false);
         }
 
@@ -395,11 +380,11 @@ var MagazineView = {
 
                             //$(magazine).turn('removePage', page.pageNumber);
                             var oldCtx = oldCanvas.getContext("2d");
-                            
+
 
                             oldCtx.drawImage(destinationCanvas, 0, 0);
 
-                            
+
                         }
                         else {
                             $(magazine).turn('addPage', $(destinationCanvas), page.pageNumber);
@@ -409,9 +394,26 @@ var MagazineView = {
                         $("#magazine").append($(destinationCanvas));
                     }
 
-                    if (pagesRendered == pages.length)
+                    if (pagesRendered == pages.length) {
+                        var multiplier = MagazineView.layout == 'double' ? 2 : 1;
+                        var finalWidth = destinationCanvas.width * multiplier;
+                        var finalHeight = destinationCanvas.height;
+
+                        if (MagazineView.layout == 'single') {
+                            var winW = $(window).width() - 40;
+                            var aspect = finalWidth / finalHeight;
+                            if (winW < finalWidth) {
+                                finalWidth = winW;
+                                finalHeight = finalWidth / aspect;
+                            }
+                        }
+
+                        $("#magazine").turn("size", finalWidth, finalHeight);
+                        $("#magazine").turn("center");
+
                         if (deferred)
                             deferred.resolve();
+                    }
                 });
             });
         }
